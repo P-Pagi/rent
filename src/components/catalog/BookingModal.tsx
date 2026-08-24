@@ -8,7 +8,8 @@ import {
   Loader2, Star, ShoppingBag, Eye, QrCode, Download, ChevronLeft, ChevronRight, Info, FileImage, Camera,
   Package,
   ShieldCheck,
-  Shirt
+  Shirt,
+  Lightbulb
 } from "lucide-react";
 
 export interface Costume {
@@ -171,10 +172,12 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [form, setForm] = useState<BookingForm>(EMPTY_FORM);
   const [ktpFile, setKtpFile] = useState<File | null>(null);
+  const [ktpError, setKtpError] = useState(false);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const thumbnailNavRef = useRef<HTMLDivElement>(null);
+  const ktpSectionRef = useRef<HTMLDivElement>(null);
 
   // Safe container-only scroll for thumbnail gallery
   useEffect(() => {
@@ -201,6 +204,7 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
       setStep("detail");
       setSelectedPreviewUrl(extractFirstImageUrl(costume.imageUrl));
       setErrorMsg("");
+      setKtpError(false);
       setBookingId(null);
       setKtpFile(null);
 
@@ -297,15 +301,23 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
   const handleProceedToPayment = (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setKtpError(false);
+
     const maxEndDate = getMaxRentalEndDate(form.rentalStartDate);
     if (form.rentalEndDate > maxEndDate) {
       setErrorMsg("Tanggal selesai maksimal 4 hari dari tanggal mulai.");
       return;
     }
+
     if (!ktpFile) {
-      setErrorMsg("Foto KTP/KIA wajib diunggah.");
+      setKtpError(true);
+      setErrorMsg("Foto KTP / KIA (Jaminan) wajib diunggah sebelum melanjutkan.");
+      setTimeout(() => {
+        ktpSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
       return;
     }
+
     setStep("payment");
   };
 
@@ -792,7 +804,7 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                 </button>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontSize: 10, fontWeight: 800, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Sewa Kostum 🌸
+                    Sewa Kostum
                   </p>
                   <h2 style={{ margin: "2px 0 0", fontSize: 14, fontWeight: 800, color: "var(--text)" }}>
                     {form.costumeName}
@@ -866,67 +878,89 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                   />
                 </Field>
 
-                <Field label="Foto KTP / KIA (Untuk Jaminan) *" icon={<FileImage size={12} />}>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <button
-                      type="button"
-                      onClick={() => cameraInputRef.current?.click()}
-                      style={{
-                        flex: 1, padding: "10px", borderRadius: 10, border: "1px solid var(--border)",
-                        background: "var(--card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                        fontSize: 12, fontWeight: 700, color: "var(--text)", transition: "all 0.2s"
-                      }}
-                    >
-                      <Camera size={14} style={{ color: "var(--primary)" }} />
-                      Ambil Foto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => galleryInputRef.current?.click()}
-                      style={{
-                        flex: 1, padding: "10px", borderRadius: 10, border: "1px solid var(--border)",
-                        background: "var(--card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                        fontSize: 12, fontWeight: 700, color: "var(--text)", transition: "all 0.2s"
-                      }}
-                    >
-                      <FileImage size={14} style={{ color: "var(--primary)" }} />
-                      Pilih File
-                    </button>
-                  </div>
-
-                  {ktpFile && (
-                    <div style={{ fontSize: 11.5, color: "var(--primary)", fontWeight: 700, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                      <CheckCircle size={12} />
-                      File terpilih: {ktpFile.name}
+                <div
+                  ref={ktpSectionRef}
+                  style={{
+                    borderRadius: 14,
+                    padding: ktpError ? "12px" : "0px",
+                    border: ktpError ? "2px solid #EF4444" : "1.5px solid transparent",
+                    background: ktpError ? "rgba(239,68,68,0.06)" : "transparent",
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  <Field label="Foto KTP / KIA (Untuk Jaminan) *" icon={<FileImage size={12} />}>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        style={{
+                          flex: 1, padding: "10px", borderRadius: 10,
+                          border: ktpError ? "1.5px solid #EF4444" : "1px solid var(--border)",
+                          background: "var(--card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          fontSize: 12, fontWeight: 700, color: "var(--text)", transition: "all 0.2s"
+                        }}
+                      >
+                        <Camera size={14} style={{ color: ktpError ? "#EF4444" : "var(--primary)" }} />
+                        Ambil Foto
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        style={{
+                          flex: 1, padding: "10px", borderRadius: 10,
+                          border: ktpError ? "1.5px solid #EF4444" : "1px solid var(--border)",
+                          background: "var(--card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          fontSize: 12, fontWeight: 700, color: "var(--text)", transition: "all 0.2s"
+                        }}
+                      >
+                        <FileImage size={14} style={{ color: ktpError ? "#EF4444" : "var(--primary)" }} />
+                        Pilih File
+                      </button>
                     </div>
-                  )}
 
-                  <input
-                    required={!ktpFile}
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setKtpFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <input
-                    required={!ktpFile}
-                    ref={galleryInputRef}
-                    type="file"
-                    accept="image/png, image/jpeg, image/jpg"
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setKtpFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                </Field>
+                    {ktpError && !ktpFile && (
+                      <div style={{ fontSize: 11.5, color: "#EF4444", fontWeight: 800, marginTop: 6, display: "flex", alignItems: "center", gap: 6, animation: "shake 0.3s ease" }}>
+                        <AlertCircle size={14} />
+                        Wajib unggah foto KTP/KIA sebagai jaminan sewa!
+                      </div>
+                    )}
+
+                    {ktpFile && (
+                      <div style={{ fontSize: 11.5, color: "var(--primary)", fontWeight: 700, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                        <CheckCircle size={12} />
+                        File terpilih: {ktpFile.name}
+                      </div>
+                    )}
+
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setKtpFile(e.target.files[0]);
+                          setErrorMsg("");
+                          setKtpError(false);
+                        }
+                      }}
+                    />
+                    <input
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setKtpFile(e.target.files[0]);
+                          setErrorMsg("");
+                          setKtpError(false);
+                        }
+                      }}
+                    />
+                  </Field>
+                </div>
 
                 <SectionTitle icon={<CalendarDays size={13} />} title="Detail Sewa Kostum" />
 
@@ -1043,12 +1077,6 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                         Rp {(costume?.price ?? getCostumePrice(form.costumeName)).toLocaleString("id-ID")}
                       </span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ color: "var(--text-muted)", fontWeight: 700 }}>Biaya Layanan ({form.paymentMethod})</span>
-                      <span style={{ fontWeight: 800, color: "var(--text)" }}>
-                        Rp {getPaymentFee(form.paymentMethod).toLocaleString("id-ID")}
-                      </span>
-                    </div>
                     <div style={{ height: 1, background: "var(--border)", opacity: 0.5, margin: "2px 0" }} />
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                       <span style={{ color: "var(--text)", fontWeight: 900 }}>Total Pembayaran</span>
@@ -1056,6 +1084,27 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                         Rp {((costume?.price ?? getCostumePrice(form.costumeName)) + getPaymentFee(form.paymentMethod)).toLocaleString("id-ID")}
                       </span>
                     </div>
+                  </div>
+                )}
+
+                {/* ── Error Alert ─────────────────────────────────────── */}
+                {errorMsg && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      background: "rgba(239,68,68,0.08)",
+                      border: "1.5px solid rgba(239,68,68,0.35)",
+                      borderRadius: 12,
+                      padding: "12px 14px",
+                      animation: "shake 0.3s ease",
+                    }}
+                  >
+                    <AlertCircle size={16} style={{ color: "#EF4444", flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: "#EF4444", lineHeight: 1.5 }}>
+                      {errorMsg}
+                    </span>
                   </div>
                 )}
 
@@ -1098,6 +1147,7 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
               </form>
             </div>
           )}
+
 
           {/* ── STEP 3: Payment Instructions & Dynamic QRIS ────── */}
           {step === "payment" && (
@@ -1158,11 +1208,11 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                   <div style={{ fontWeight: 800, color: "var(--text)", fontSize: 13 }}>
                     {form.costumeName}
                   </div>
-                  <div style={{ color: "var(--text-muted)", fontSize: 11.5 }}>
-                    <CalendarDays /> {form.rentalStartDate} s/d {form.rentalEndDate} • <User /> {form.name} ({form.phone})
+                  <div style={{ color: "var(--text-muted)", fontSize: 11.5, display: "flex", alignItems: "center", gap: 4 }}>
+                    <CalendarDays size={11} /> {form.rentalStartDate} s/d {form.rentalEndDate} • <User size={11} /> {form.name} ({form.phone})
                   </div>
-                  <div style={{ color: "var(--text-soft)", fontSize: 11 }}>
-                    <Package /> {form.pickupMethod} • <CreditCard /> Pembayaran QRIS Only
+                  <div style={{ color: "var(--text-soft)", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Package size={11} /> {form.pickupMethod} • <CreditCard size={11} /> Pembayaran QRIS
                   </div>
                 </div>
 
@@ -1184,9 +1234,6 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                     <QrCode size={16} style={{ color: "var(--primary)" }} />
                     <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text)" }}>
                       QRIS Noy.Rentcos
-                    </span>
-                    <span style={{ fontSize: 10, fontWeight: 700, background: "rgba(16,185,129,0.12)", color: "#10B981", padding: "2px 8px", borderRadius: 10 }}>
-                      Otomatis Presisi
                     </span>
                   </div>
 
@@ -1261,7 +1308,7 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
 
                 <div style={{ background: "var(--card)", border: "1px solid var(--border-soft)", borderRadius: 14, padding: "14px 16px" }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "var(--text)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                    <span>💡 Cara Pembayaran QRIS Dynamic:</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Lightbulb size={14} color="var(--primary)" />Cara Pembayaran QRIS Dynamic:</span>
                   </div>
                   <ol style={{ margin: 0, paddingLeft: 18, fontSize: 11.5, color: "var(--text-muted)", lineHeight: 1.6 }}>
                     <li>Buka aplikasi m-Banking (BCA, Mandiri, BRI, BNI) atau E-Wallet (GoPay, OVO, Dana, ShopeePay, LinkAja).</li>

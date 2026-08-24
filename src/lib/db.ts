@@ -11,7 +11,15 @@ const getPrismaClient = (): PrismaClient => {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set");
   }
-  const pool = new Pool({ connectionString });
+
+  // Explicitly configure SSL to avoid pg deprecation warning about ambiguous ssl modes.
+  // In production Vercel/cloud environments, most managed Postgres requires SSL.
+  const isProduction = process.env.NODE_ENV === "production";
+  const pool = new Pool({
+    connectionString,
+    ssl: isProduction ? { rejectUnauthorized: true } : false,
+  });
+
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 };
