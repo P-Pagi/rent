@@ -1,0 +1,96 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+enum BookingStatus {
+  BOOKING_BARU
+  MENUNGGU_KONFIRMASI
+  MENUNGGU_PEMBAYARAN
+  SUDAH_DIBAYAR
+  KOSTUM_DISIAPKAN
+  SUDAH_DIAMBIL
+  SEDANG_DISEWA
+  SUDAH_DIKEMBALIKAN
+  SELESAI
+  DIBATALKAN
+}
+
+model Admin {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  username       String
+  password       String   // Hashed password
+  avatarUrl      String?
+  readNotifIds   String   @default("") // Comma-separated notification IDs that have been read
+  fcmToken       String?              // Firebase Cloud Messaging device token
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Customer {
+  id          String    @id @default(uuid())
+  name        String
+  instagram   String    @unique
+  phone       String
+  address     String
+  totalRentals Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+}
+
+model Costume {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  stock       Int       @default(1)
+  available   Int       @default(1)
+  borrowed    Int       @default(0)
+  maintenance Int       @default(0)
+  popularity  Int       @default(0)
+  price       Int       @default(0)
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  bookingDate     DateTime      @default(now())
+  rentalStartDate DateTime
+  rentalEndDate   DateTime
+  eventName       String?
+  paymentMethod   String        // e.g. Transfer Bank, E-Wallet
+  pickupMethod    String        // e.g. Ambil Sendiri, Kurir
+  totalAmount     Float
+  notes           String?
+  attachmentUrl   String?       // Google Form attachment link
+  ktpUrl          String?       // Foto KTP/KIA URL
+  status          String        @default("BOOKING_BARU") // Using String default so SQLite works seamlessly with any string mapping
+  
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  
+  costumeId       String
+  costume         Costume       @relation(fields: [costumeId], references: [id])
+  
+  timeline        Timeline[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Timeline {
+  id          String        @id @default(uuid())
+  bookingId   String
+  booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  status      String
+  updatedBy   String        // Admin name or "System Sync"
+  comment     String?
+  createdAt   DateTime      @default(now())
+}
+
