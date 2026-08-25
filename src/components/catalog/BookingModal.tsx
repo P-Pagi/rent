@@ -177,9 +177,10 @@ interface BookingModalProps {
   costume: Costume | null;
   isOpen: boolean;
   onClose: (resetAll?: boolean) => void;
+  isLoading?: boolean;
 }
 
-export default function BookingModal({ costume, isOpen, onClose }: BookingModalProps) {
+export default function BookingModal({ costume, isOpen, onClose, isLoading = false }: BookingModalProps) {
   const [step, setStep] = useState<"detail" | "form" | "payment" | "success" | "error">("detail");
   const [selectedPreviewUrl, setSelectedPreviewUrl] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -653,7 +654,11 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                       {costume.name}
                     </h2>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <Badge available={costume.available} />
+                      {isLoading ? (
+                        <span className="skeleton" style={{ width: 90, height: 22, display: "inline-block", borderRadius: 10 }} />
+                      ) : (
+                        <Badge available={costume.available} />
+                      )}
                       <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(245,158,11,0.06)", borderRadius: 8, padding: "2px 8px" }}>
                         <Star size={11} color="#F59E0B" fill="#F59E0B" />
                         <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-muted)" }}>
@@ -673,7 +678,11 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                     <div style={{ width: 1, background: "var(--border)" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
                       <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-soft)", textTransform: "uppercase", whiteSpace: "nowrap" }}>Stok Tersedia</div>
-                      <div style={{ fontSize: 13.5, fontWeight: 800, color: costume.available > 0 ? "var(--text)" : "#EF4444", marginTop: 2 }}>{costume.available} Unit</div>
+                      {isLoading ? (
+                        <div className="skeleton" style={{ width: 48, height: 18, borderRadius: 6, margin: "4px auto 0" }} />
+                      ) : (
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: costume.available > 0 ? "var(--text)" : "#EF4444", marginTop: 2 }}>{costume.available} Unit</div>
+                      )}
                     </div>
                     <div style={{ width: 1, background: "var(--border)" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
@@ -848,24 +857,24 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
               >
                 <SectionTitle icon={<User size={13} />} title="Data Diri Pemesan" />
 
-                <Field label="Nama Lengkap *" icon={<User size={12} />}>
+                <Field label="Instagram *" icon={<AtSign size={12} />}>
                   <input
                     required
-                    value={form.name}
-                    onChange={(e) => set("name", e.target.value)}
-                    placeholder="Nama lengkap sesuai KTP/ID"
+                    value={form.instagram}
+                    onChange={(e) => set("instagram", e.target.value)}
+                    onBlur={(e) => handleInstagramBlur(e.target.value)}
+                    placeholder="@username"
                     style={inputStyle}
                   />
                 </Field>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <Field label="Instagram *" icon={<AtSign size={12} />}>
+                  <Field label="Nama Lengkap *" icon={<User size={12} />}>
                     <input
                       required
-                      value={form.instagram}
-                      onChange={(e) => set("instagram", e.target.value)}
-                      onBlur={(e) => handleInstagramBlur(e.target.value)}
-                      placeholder="@username"
+                      value={form.name}
+                      onChange={(e) => set("name", e.target.value)}
+                      placeholder="Nama lengkap sesuai KTP/ID"
                       style={inputStyle}
                     />
                   </Field>
@@ -1430,7 +1439,7 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
               </div>
               <div>
                 <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--text)", margin: "0 0 6px" }}>
-                  Booking Berhasil Dikirim! 🎉
+                  Booking Berhasil Dikirim!
                 </h3>
                 {bookingId && (
                   <div style={{ fontSize: 12, fontWeight: 800, color: "var(--primary)", background: "rgba(236,72,153,0.06)", display: "inline-block", padding: "4px 12px", borderRadius: 8, marginTop: 4 }}>

@@ -5,7 +5,13 @@ import path from "node:path";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-const ACTIVE_RENTAL_STATUSES = ["SUDAH_DIAMBIL", "SEDANG_DISEWA"] as const;
+const ACTIVE_RENTAL_STATUSES = [
+  "SUDAH_DIBAYAR",
+  "KOSTUM_DISIAPKAN",
+  "SUDAH_DIAMBIL",
+  "SEDANG_DISEWA",
+  "SUDAH_DIKEMBALIKAN",
+] as const;
 
 function splitImageUrls(imageUrl?: string | null) {
   return imageUrl

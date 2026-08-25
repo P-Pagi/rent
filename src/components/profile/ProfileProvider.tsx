@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 import { PushProvider } from "@/components/shared/PushProvider";
 
 export interface Profile {
@@ -16,29 +16,38 @@ interface ProfileContextValue {
 
 const STORAGE_KEY = "hana_admin_profile";
 const DEFAULT_PROFILE: Profile = {
-  name: "Hana-chan",
-  email: "admin@kawairental.id",
+  name: "Admin",
+  email: "admin@noyrent.cos",
 };
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
 function ProfileStateProvider({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
-
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed?.name && parsed?.email) {
-        setProfile({ name: String(parsed.name), email: String(parsed.email) });
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.name && parsed?.email && parsed.name !== "Hana-chan") {
+          setProfile({ name: String(parsed.name), email: String(parsed.email) });
+          return;
+        }
+      } catch {
+        // ignore invalid localStorage data
       }
-    } catch {
-      // ignore invalid localStorage data
     }
-  }, []);
+
+    if (session?.user?.name) {
+      setProfile({
+        name: session.user.name,
+        email: session.user.email || "admin@noyrent.cos",
+      });
+    }
+  }, [session]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

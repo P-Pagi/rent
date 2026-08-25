@@ -126,6 +126,11 @@ export async function updateBookingStatus(
       // Admin konfirmasi pembayaran → kurangi available (hanya jika baru pertama konfirmasi)
       const isFirstConfirm = !["SUDAH_DIBAYAR", "KOSTUM_DISIAPKAN", "SUDAH_DIAMBIL", "SEDANG_DISEWA", "SUDAH_DIKEMBALIKAN", "SELESAI"].includes(prevStatus || "");
       if (isFirstConfirm) {
+        // Guard: hanya kurangi jika stok masih tersedia (cegah stok negatif)
+        const currentCostume = await tx.costume.findUnique({ where: { id: costumeId } });
+        if (!currentCostume || currentCostume.available <= 0) {
+          throw new Error(`Stok kostum "${booking.costume?.name ?? costumeId}" sudah habis dan tidak bisa dikonfirmasi. Batalkan salah satu booking.`);
+        }
         await tx.costume.update({
           where: { id: costumeId },
           data: { available: { decrement: 1 } },

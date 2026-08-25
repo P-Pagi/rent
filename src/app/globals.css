@@ -100,6 +100,15 @@
 /* ─── Base Styles ─────────────────────────────────────────────────────── */
 * {
   box-sizing: border-box;
+  /* Prevent I-beam text cursor on non-input elements */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Re-enable text selection for actual input elements */
+input, textarea, [contenteditable="true"], .selectable {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 html {

@@ -238,26 +238,34 @@ export default function CostumeCard({ costume, onClick, onEdit, onDelete, onFini
           {costume.popularity}
         </div>
 
-        {/* Stock pill */}
+        {/* Availability pill */}
         <div
           style={{
             position: "absolute",
             bottom: 10,
             left: 10,
-            background: "rgba(255,255,255,0.90)",
+            background: costume.available <= 0
+              ? "rgba(239,68,68,0.85)"
+              : costume.available === 1
+                ? "rgba(251,191,36,0.90)"
+                : "rgba(255,255,255,0.90)",
             backdropFilter: "blur(8px)",
             padding: "3px 9px",
             borderRadius: 99,
             fontSize: 11,
             fontWeight: 700,
-            color: "var(--text)",
+            color: costume.available <= 0
+              ? "white"
+              : costume.available === 1
+                ? "white"
+                : "var(--text)",
             display: "flex",
             alignItems: "center",
             gap: 4,
           }}
         >
           <Package size={10} />
-          Stok: {costume.stock}
+          {costume.available <= 0 ? "Habis" : `${costume.available} Tersedia`}
         </div>
       </div>
 

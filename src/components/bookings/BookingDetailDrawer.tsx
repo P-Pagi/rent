@@ -71,7 +71,7 @@ export default function BookingDetailDrawer({
   const [savingNotes, setSavingNotes] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const { data: session } = useSession();
-  const profileName = session?.user?.name ?? "Hana-chan";
+  const profileName = session?.user?.name ?? "Admin";
 
   // Sync status & notes saat booking berubah (setelah update)
   useEffect(() => {

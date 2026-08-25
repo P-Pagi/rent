@@ -268,7 +268,7 @@ function LoginForm() {
 
         {/* Footer Hint */}
         <div style={{ textAlign: "center", fontSize: 11.5, color: "var(--text-soft)", fontWeight: 600 }}>
-          Hint: admin / password
+          © 2026 <strong>noy.rentcos.smd</strong>. Made with ❤️ for Cosplayers.
         </div>
       </div>
     </div>

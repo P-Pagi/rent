@@ -283,6 +283,7 @@ export default function CatalogClient({ costumes }: { costumes: Costume[] }) {
   // Modal Control States
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCostume, setSelectedCostume] = useState<Costume | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [userInstagram, setUserInstagram] = useState("");
@@ -344,9 +345,23 @@ export default function CatalogClient({ costumes }: { costumes: Costume[] }) {
     return range;
   };
 
-  const openModal = (c: Costume) => {
+  const openModal = async (c: Costume) => {
+    // Show modal immediately with cached data for snappy UX
     setSelectedCostume(c);
     setModalOpen(true);
+    // Then fetch fresh data from server to get up-to-date available count
+    setModalLoading(true);
+    try {
+      const res = await fetch(`/api/public/costumes/${c.id}`);
+      if (res.ok) {
+        const fresh = await res.json();
+        setSelectedCostume(fresh);
+      }
+    } catch {
+      // silently fallback to cached data
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   const closeModal = (resetAll = false) => {
@@ -601,7 +616,6 @@ export default function CatalogClient({ costumes }: { costumes: Costume[] }) {
         }}
       >
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
-          <Shirt size={14} style={{ color: "var(--primary)" }} />
           Menampilkan {filtered.length} Koleksi Kostum
         </div>
 
@@ -972,6 +986,7 @@ export default function CatalogClient({ costumes }: { costumes: Costume[] }) {
         costume={selectedCostume}
         isOpen={modalOpen}
         onClose={closeModal}
+        isLoading={modalLoading}
       />
 
       <HistoryModal
