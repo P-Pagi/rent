@@ -90,4 +90,6 @@ export interface DashboardStats {
   selesaiBulanIni: number;
   totalCustomer: number;
   bookingHariIni: number;
+  trendBookingBaru: number;
+  trendSelesaiBulanIni: number;
 }

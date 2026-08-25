@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Rent',
   webDir: 'public',
   server: {
-    url: 'https://3f6d-2404-c0-4c0b-00-8509-7111.ngrok-free.app/login',
+    url: 'https://www.noyrentcos.my.id/login',
     cleartext: true,
     allowNavigation: ['10.30.1.15', 'localhost', '127.0.0.1', '10.0.2.2', '0.0.0.0'],
   },
@@ -16,7 +16,7 @@ const config: CapacitorConfig = {
     },
     LocalNotifications: {
       smallIcon: 'ic_stat_notification',
-      iconColor: '#2563EB',
+      iconColor: 'var(--primary)',
       sound: 'default',
     },
   },

@@ -131,8 +131,15 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
   const [draft, setDraft] = useState<CostumeDraft>(EMPTY_DRAFT);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
   const mounted = typeof window !== "undefined";
+
+  // ── Staged changes (belum dieksekusi sampai Simpan) ──────────────────────
+  // File baru yang dipilih user tapi belum diupload ke GDrive
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  // Blob URL untuk preview lokal dari pendingFiles
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
+  // URL yang sudah ada di draft tapi ditandai untuk dihapus
+  const [removedUrls, setRemovedUrls] = useState<Set<string>>(new Set());
 
   const formatRupiah = (value: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -141,26 +148,43 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
       maximumFractionDigits: 0,
     }).format(value);
 
-  const costumeImages = useMemo(() => {
-    return draft.imageUrl
-      ?.split(",")
-      .map((url) => url.trim())
-      .filter(Boolean) ?? [];
-  }, [draft.imageUrl]);
+  // Existing URLs yang belum dihapus
+  const existingUrls = useMemo(() => {
+    const all = draft.imageUrl?.split(",").map((u) => u.trim()).filter(Boolean) ?? [];
+    return all.filter((url) => !removedUrls.has(url));
+  }, [draft.imageUrl, removedUrls]);
+
+  // Semua item yang tampil di preview: existing + pending (blob)
+  const allPreviewItems = useMemo(
+    () => [
+      ...existingUrls.map((url) => ({ url, isPending: false })),
+      ...pendingPreviews.map((url) => ({ url, isPending: true })),
+    ],
+    [existingUrls, pendingPreviews]
+  );
 
   const handleRemoveImage = (indexToRemove: number) => {
-    setDraft((prev) => {
-      const current = prev.imageUrl
-        ?.split(",")
-        .map((url) => url.trim())
-        .filter(Boolean) ?? [];
-      const updated = current.filter((_, i) => i !== indexToRemove);
-      return { ...prev, imageUrl: updated.join(", ") };
-    });
+    if (indexToRemove < existingUrls.length) {
+      // Tandai URL existing sebagai removed (belum benar-benar dihapus dari DB)
+      const urlToRemove = existingUrls[indexToRemove];
+      setRemovedUrls((prev) => new Set([...prev, urlToRemove]));
+    } else {
+      // Hapus dari pending (batalkan pemilihan file)
+      const pendingIndex = indexToRemove - existingUrls.length;
+      URL.revokeObjectURL(pendingPreviews[pendingIndex]);
+      setPendingFiles((prev) => prev.filter((_, i) => i !== pendingIndex));
+      setPendingPreviews((prev) => prev.filter((_, i) => i !== pendingIndex));
+    }
   };
 
   const handleRemoveAllImages = () => {
-    setDraft((prev) => ({ ...prev, imageUrl: "" }));
+    // Tandai semua existing sebagai removed
+    const all = draft.imageUrl?.split(",").map((u) => u.trim()).filter(Boolean) ?? [];
+    setRemovedUrls(new Set(all));
+    // Bebaskan semua pending
+    pendingPreviews.forEach((url) => URL.revokeObjectURL(url));
+    setPendingFiles([]);
+    setPendingPreviews([]);
   };
 
   useEffect(() => {
@@ -187,10 +211,18 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
     });
   }, [initialCostumes, search, filterTab]);
 
+  const resetStagedChanges = () => {
+    pendingPreviews.forEach((url) => URL.revokeObjectURL(url));
+    setPendingFiles([]);
+    setPendingPreviews([]);
+    setRemovedUrls(new Set());
+  };
+
   const openCreateModal = () => {
     setEditingId(null);
     setDraft(EMPTY_DRAFT);
     setNotice(null);
+    resetStagedChanges();
     setIsFormOpen(true);
   };
 
@@ -205,10 +237,12 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
       imageUrl: costume.imageUrl || "",
     });
     setNotice(null);
+    resetStagedChanges();
     setIsFormOpen(true);
   };
 
   const closeForm = () => {
+    resetStagedChanges();
     setIsFormOpen(false);
     setEditingId(null);
     setDraft(EMPTY_DRAFT);
@@ -221,11 +255,31 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
     setNotice(null);
 
     try {
-      if (editingId) {
-        await updateCostume(editingId, draft);
-      } else {
-        await createCostume(draft);
+      // 1. Upload foto baru ke GDrive (hanya saat Simpan diklik)
+      let newUrls: string[] = [];
+      if (pendingFiles.length > 0) {
+        setNotice(`Mengunggah ${pendingFiles.length} foto baru...`);
+        const formData = new FormData();
+        pendingFiles.forEach((f) => formData.append("files", f));
+        const res = await fetch("/api/upload?folder=catalog", { method: "POST", body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Gagal mengunggah gambar.");
+        newUrls = Array.isArray(data.urls) ? data.urls : data.url ? [data.url] : [];
       }
+
+      // 2. Hitung URL final: existing yang tidak dihapus + URL baru
+      const existingFinal = (draft.imageUrl?.split(",").map((u) => u.trim()).filter(Boolean) ?? [])
+        .filter((url) => !removedUrls.has(url));
+      const finalImageUrl = [...existingFinal, ...newUrls].join(", ");
+
+      // 3. Simpan kostum dengan URL final
+      const finalDraft = { ...draft, imageUrl: finalImageUrl };
+      if (editingId) {
+        await updateCostume(editingId, finalDraft);
+      } else {
+        await createCostume(finalDraft);
+      }
+
       closeForm();
       router.refresh();
     } catch (err) {
@@ -257,53 +311,17 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Hanya simpan file secara lokal — upload terjadi saat Simpan
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
 
-    setUploading(true);
-    setNotice(files.length > 1 ? `Mengunggah ${files.length} gambar...` : "Mengunggah gambar...");
+    const previews = files.map((f) => URL.createObjectURL(f));
+    setPendingFiles((prev) => [...prev, ...files]);
+    setPendingPreviews((prev) => [...prev, ...previews]);
+    setNotice(`${files.length} foto dipilih dan siap diunggah. Klik "Simpan" untuk menyimpan.`);
 
-    try {
-      const formData = new FormData();
-      files.forEach((file) => formData.append("files", file));
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Gagal mengunggah gambar.");
-      }
-
-      const uploadedUrls: string[] = Array.isArray(data.urls)
-        ? data.urls
-        : data.url
-        ? [data.url]
-        : [];
-
-      if (uploadedUrls.length === 0) {
-        throw new Error("Tidak ada URL gambar yang dikembalikan.");
-      }
-
-      setDraft((prev) => {
-        const existing = prev.imageUrl
-          ?.split(",")
-          .map((url) => url.trim())
-          .filter(Boolean) ?? [];
-        const merged = [...new Set([...existing, ...uploadedUrls])];
-        return { ...prev, imageUrl: merged.join(", ") };
-      });
-
-      setNotice(`${uploadedUrls.length} gambar baru berhasil ditambahkan.`);
-    } catch (err) {
-      setNotice(err instanceof Error ? err.message : "Gagal mengunggah gambar.");
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
+    e.target.value = "";
   };
 
   return (
@@ -615,26 +633,25 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
               </div>
 
               <div className="costume-upload-box">
-                <label className="costume-upload-button" style={{ opacity: uploading ? 0.7 : 1, cursor: uploading ? "wait" : "pointer" }}>
+                <label className="costume-upload-button">
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                     <Plus size={14} />
-                    {uploading ? "Mengunggah..." : "Pilih beberapa gambar"}
+                    Pilih beberapa gambar
                   </span>
                   <input
                     type="file"
                     accept="image/*"
                     multiple
-                    disabled={uploading}
                     onChange={handleImageUpload}
                     style={{ display: "none" }}
                   />
                 </label>
                 <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.4 }}>
-                  Kamu bisa memilih banyak foto sekaligus. Foto baru yang dipilih akan ditambahkan ke daftar tanpa menghapus foto sebelumnya.
+                  Foto yang dipilih <strong>belum langsung diupload</strong> — akan diunggah ke Google Drive saat kamu klik &quot;Simpan Perubahan&quot;.
                 </div>
               </div>
 
-              {costumeImages.length > 0 && (
+              {allPreviewItems.length > 0 && (
                 <div
                   style={{
                     border: "1px solid var(--border)",
@@ -648,7 +665,11 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", flex: 1 }}>
-                      {costumeImages.length} gambar terpilih untuk kostum ini.
+                      {existingUrls.length > 0 && `${existingUrls.length} foto tersimpan`}
+                      {existingUrls.length > 0 && pendingPreviews.length > 0 && " + "}
+                      {pendingPreviews.length > 0 && (
+                        <span style={{ color: "var(--primary)" }}>{pendingPreviews.length} foto baru (belum disimpan)</span>
+                      )}
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <button
@@ -671,13 +692,24 @@ export default function CostumesClient({ initialCostumes }: CostumesClientProps)
                   </div>
 
                   <div className="costume-preview-grid">
-                    {costumeImages.map((url, index) => (
-                      <AdminImageThumbnail
-                        key={`${url}-${index}`}
-                        url={url}
-                        index={index}
-                        onRemove={handleRemoveImage}
-                      />
+                    {allPreviewItems.map(({ url, isPending }, index) => (
+                      <div key={`${url}-${index}`} style={{ position: "relative" }}>
+                        <AdminImageThumbnail
+                          url={url}
+                          index={index}
+                          onRemove={handleRemoveImage}
+                        />
+                        {isPending && (
+                          <div style={{
+                            position: "absolute", bottom: 4, left: 4,
+                            background: "var(--primary)", color: "white",
+                            fontSize: 9, fontWeight: 800, padding: "2px 6px",
+                            borderRadius: 6, pointerEvents: "none",
+                          }}>
+                            BARU
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>

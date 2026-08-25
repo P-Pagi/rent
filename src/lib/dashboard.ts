@@ -11,11 +11,20 @@ function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
-// ─── Summary stats for KPI cards ─────────────────────────────────────────
 export async function getDashboardStats(): Promise<DashboardStats> {
   const now   = new Date();
   const today = startOfDay(now);
   const month = startOfMonth(now);
+  
+  // start of this week (Monday)
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const thisWeekStart = new Date(now.getFullYear(), now.getMonth(), diff);
+  const lastWeekStart = new Date(thisWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+  
+  // start of last month
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
   const IN_PROGRESS = [
     "MENUNGGU_KONFIRMASI",
@@ -32,6 +41,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     selesaiBulanIni,
     totalCustomer,
     bookingHariIni,
+    bookingsThisWeek,
+    bookingsLastWeek,
+    selesaiBulanLalu,
   ] = await Promise.all([
     prisma.booking.count({ where: { status: "BOOKING_BARU" } }),
     prisma.booking.count({ where: { status: { in: IN_PROGRESS } } }),
@@ -41,7 +53,26 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
     prisma.customer.count(),
     prisma.booking.count({ where: { bookingDate: { gte: today } } }),
+    prisma.booking.count({ where: { bookingDate: { gte: thisWeekStart } } }),
+    prisma.booking.count({ where: { bookingDate: { gte: lastWeekStart, lt: thisWeekStart } } }),
+    prisma.booking.count({
+      where: { status: "SELESAI", updatedAt: { gte: lastMonthStart, lte: lastMonthEnd } },
+    }),
   ]);
+
+  let trendBookingBaru = 0;
+  if (bookingsLastWeek > 0) {
+    trendBookingBaru = Math.round(((bookingsThisWeek - bookingsLastWeek) / bookingsLastWeek) * 100);
+  } else if (bookingsThisWeek > 0) {
+    trendBookingBaru = 100;
+  }
+
+  let trendSelesaiBulanIni = 0;
+  if (selesaiBulanLalu > 0) {
+    trendSelesaiBulanIni = Math.round(((selesaiBulanIni - selesaiBulanLalu) / selesaiBulanLalu) * 100);
+  } else if (selesaiBulanIni > 0) {
+    trendSelesaiBulanIni = 100;
+  }
 
   return {
     bookingBaru,
@@ -50,6 +81,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     selesaiBulanIni,
     totalCustomer,
     bookingHariIni,
+    trendBookingBaru,
+    trendSelesaiBulanIni,
   };
 }
 

@@ -11,6 +11,7 @@ import {
   Shirt,
   Lightbulb
 } from "lucide-react";
+import WhatsAppIcon from "@/components/shared/WhatsAppIcon";
 
 export interface Costume {
   id: string;
@@ -75,18 +76,27 @@ const extractFirstImageUrl = (imageUrl: string | null) =>
 const extractImageUrls = (imageUrl: string | null) =>
   imageUrl?.split(",").map((url) => url.trim()).filter(Boolean) ?? [];
 
+function getOptimizedImageUrl(url: string, size: string = "w1000") {
+  if (url && url.includes("drive.google.com/thumbnail")) {
+    return url.replace(/sz=w\d+/, `sz=${size}`);
+  }
+  return url;
+}
+
 function SafeImageThumbnail({
   src,
   alt,
   fill,
   style,
   className,
+  size = "w1000",
 }: {
   src: string;
   alt: string;
   fill?: boolean;
   style?: React.CSSProperties;
   className?: string;
+  size?: string;
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -98,13 +108,16 @@ function SafeImageThumbnail({
     );
   }
 
+  const optimizedUrl = getOptimizedImageUrl(src, size);
+
   return (
     <Image
-      src={src}
+      src={optimizedUrl}
       alt={alt}
       fill={fill}
       className={className}
       style={style}
+      loading="lazy"
       onError={() => setFailed(true)}
     />
   );
@@ -329,7 +342,7 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
       if (ktpFile) {
         const formData = new FormData();
         formData.append("file", ktpFile);
-        const uploadRes = await fetch("/api/upload", {
+        const uploadRes = await fetch("/api/upload?folder=ktp", {
           method: "POST",
           body: formData,
         });
@@ -623,6 +636,7 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                                 alt={`${costume.name} preview ${index + 1}`}
                                 fill
                                 style={{ objectFit: "cover" }}
+                                size="w200"
                               />
                             </div>
                           );
@@ -1431,13 +1445,14 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
               {bookingId && (
                 <a
                   href={`https://wa.me/6285174437275?text=${encodeURIComponent(
-                    `Halo Noy.Rentcos! 🌸\n\nSaya baru saja membuat pesanan sewa kostum:\n` +
-                    `- ID Booking: #${bookingId.slice(-8).toUpperCase()}\n` +
-                    `- Nama Pemesan: ${form.name}\n` +
-                    `- Kostum: ${form.costumeName}\n` +
-                    `- Skema Pembayaran: QRIS\n` +
-                    `- Total Nominal: Rp ${(costume?.price ?? getCostumePrice(form.costumeName)).toLocaleString("id-ID")}\n\n` +
-                    `Mohon dikonfirmasi ya kak, terima kasih! ✨`
+                    `Halo Kak Noy! 🌸\n\n` +
+                    `Aku baru aja selesai booking kostum lewat website nih. Berikut detail pesananku ya kak:\n\n` +
+                    `🎫 *ID Booking:* #${bookingId.slice(-8).toUpperCase()}\n` +
+                    `👤 *Nama:* ${form.name}\n` +
+                    `👗 *Kostum:* ${form.costumeName}\n` +
+                    `💳 *Bayar via:* QRIS\n` +
+                    `💰 *Total Nominal:* Rp ${(costume?.price ?? getCostumePrice(form.costumeName)).toLocaleString("id-ID")}\n\n` +
+                    `Ini aku sekalian mau kirim bukti pembayarannya yaa. Ditunggu konfirmasinya Kak Noy, makasih banyak! ✨`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1462,9 +1477,7 @@ export default function BookingModal({ costume, isOpen, onClose }: BookingModalP
                     fontFamily: "inherit",
                   }}
                 >
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.25 8.477 3.517 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.966a9.9 9.9 0 0 0-6.98-2.879C6.205 2.96 1.782 7.33 1.778 12.76c-.001 1.729.475 3.418 1.378 4.907L2.148 22.09l4.5-.754z" />
-                  </svg>
+                  <WhatsAppIcon size={18} />
                   Kirim Konfirmasi ke WhatsApp
                 </a>
               )}

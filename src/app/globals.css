@@ -122,6 +122,19 @@ body {
 ::-webkit-scrollbar-thumb  { background: var(--primary-light); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
+/* Hide scrollbar on mobile devices while keeping functionality */
+@media (max-width: 767px) {
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
 /* ─── Keyframe Animations ──────────────────────────────────────────────── */
 @keyframes float-bubble {
   0%   { transform: translateY(0px) scale(1);    opacity: 0.5; }

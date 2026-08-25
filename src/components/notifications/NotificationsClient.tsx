@@ -303,7 +303,7 @@ export default function NotificationsClient({ notifications }: Props) {
                   {/* Time + arrow */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
                     <span style={{ fontSize: 11, color: "var(--text-soft)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {timeAgo(n.time)}
+                      {n.type === "pickup_today" ? "Hari Ini" : timeAgo(n.time)}
                     </span>
                     <ArrowRight size={14} style={{ color: "var(--text-soft)", opacity: 0.5 }} />
                   </div>

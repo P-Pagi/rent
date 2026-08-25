@@ -51,10 +51,10 @@ function timeAgo(dateStr: string) {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diff = Math.floor((now - then) / 1000);
-  if (diff < 60) return `${diff}d lalu`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m lalu`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}j lalu`;
-  return `${Math.floor(diff / 86400)}h lalu`;
+  if (diff < 60) return `${diff} detik lalu`;
+  if (diff < 3600) return `${Math.floor(diff / 60)} menit lalu`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
+  return `${Math.floor(diff / 86400)} hari lalu`;
 }
 
 export default function Navbar({ title, onMenuClick }: NavbarProps) {
@@ -140,9 +140,20 @@ export default function Navbar({ title, onMenuClick }: NavbarProps) {
     saveReadIds(nextIds);
   };
 
+  // Load dark mode state
+  useEffect(() => {
+    const saved = localStorage.getItem("kawaii-dark");
+    if (saved === "true") {
+      setDark(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
   const toggleDark = () => {
-    setDark((d) => !d);
-    document.documentElement.classList.toggle("dark");
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("kawaii-dark", String(next));
   };
 
 
@@ -398,7 +409,7 @@ export default function Navbar({ title, onMenuClick }: NavbarProps) {
                           {n.body}
                         </p>
                         <span style={{ fontSize: 10.5, color: "var(--text-soft)", fontWeight: 600, marginTop: 3, display: "block" }}>
-                          {timeAgo(n.time)}
+                          {n.type === "pickup_today" ? "Hari Ini" : timeAgo(n.time)}
                         </span>
                       </div>
                     </Link>

@@ -11,13 +11,21 @@ interface CostumeCardProps {
   onFinishMaintenance?: (costumeId: string) => void;
 }
 
+function getOptimizedImageUrl(url: string, size: string = "w400") {
+  if (url && url.includes("drive.google.com/thumbnail")) {
+    return url.replace(/sz=w\d+/, `sz=${size}`);
+  }
+  return url;
+}
+
 export default function CostumeCard({ costume, onClick, onEdit, onDelete, onFinishMaintenance }: CostumeCardProps) {
   const [imageError, setImageError] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const availPct = costume.stock > 0 ? (costume.available / costume.stock) * 100 : 0;
   const imageUrls = costume.imageUrl?.split(",").map((url) => url.trim()).filter(Boolean) ?? [];
-  const currentImageUrl = imageUrls[currentIndex] ?? imageUrls[0] ?? null;
+  const rawImageUrl = imageUrls[currentIndex] ?? imageUrls[0] ?? null;
+  const currentImageUrl = rawImageUrl ? getOptimizedImageUrl(rawImageUrl, "w400") : null;
 
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -72,6 +80,7 @@ export default function CostumeCard({ costume, onClick, onEdit, onDelete, onFini
               fill
               sizes="(max-width: 768px) 100vw, 320px"
               style={{ objectFit: "cover", transition: "opacity 0.3s ease" }}
+              loading="lazy"
               unoptimized
               onError={() => setImageError(true)}
             />

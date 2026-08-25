@@ -8,7 +8,7 @@ export default function SettingsPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <PageHeader
         title="Pengaturan Sistem"
-        subtitle="Kelola sinkronisasi Google Sheets, tema tampilan, notifikasi, dan profil akun admin."
+        subtitle="Kelola tema tampilan, notifikasi, dan profil akun admin."
         emoji="⚙️"
       />
 

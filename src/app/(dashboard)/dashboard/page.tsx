@@ -41,7 +41,7 @@ export default async function DashboardPage() {
       value: stats.bookingBaru,
       subtitle: "Menunggu diproses",
       color: "#8B5CF6",
-      trend: { value: 15, label: "vs. minggu lalu" },
+      trend: { value: stats.trendBookingBaru, label: "vs. minggu lalu" },
     },
     {
       title: "Sedang Diproses",
@@ -60,7 +60,7 @@ export default async function DashboardPage() {
       value: stats.selesaiBulanIni,
       subtitle: "Rental sukses",
       color: "#86EFAC",
-      trend: { value: 8, label: "vs. bulan lalu" },
+      trend: { value: stats.trendSelesaiBulanIni, label: "vs. bulan lalu" },
     },
     {
       title: "Total Customer",

@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useProfile } from "@/components/profile/ProfileProvider";
 import PageHeader from "@/components/shared/PageHeader";
 
 export default function ProfileGreeting() {
-  const { data: session } = useSession();
-  const accountName = session?.user?.name ?? "Hana-chan";
+  const { profile } = useProfile();
+  const accountName = profile.name || "Hana-chan";
 
   return (
     <PageHeader
